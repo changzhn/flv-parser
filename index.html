@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>parse flv</title>
+    <style>
+        .info-title {
+            display: inline-block;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <h3>文件信息</h3>
+        <h4>Header</h4>
+        <div class="info">
+            <span class="info-title">文件类型：</span>
+            <span class="info-desc">{{header.fileType}}</span>
+        </div>
+        <div class="info">
+            <span class="info-title">version：</span>
+            <span class="info-desc">{{header.version}}</span>
+        </div>
+        <div class="info">
+            <span class="info-title">是否有音频：</span>
+            <span class="info-desc">{{header.audio}}</span>
+        </div>
+        <div class="info">
+            <span class="info-title">是否有视频：</span>
+            <span class="info-desc">{{header.video}}</span>
+        </div>
+
+        <hr />
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.12/vue.min.js"></script>
+    <script src="./FLVParser.js"></script>
+    <script>
+
+
+        new Vue({
+            el: '#root',
+            data: {
+                header: {},
+            },
+            mounted: function() {
+                this.getFile();
+                // const buf = new ArrayBuffer(4);
+                // const view = new DataView(buf);
+                // view.setInt8(0, 1);
+                // view.setInt8(1, 0);
+                // view.setInt8(2, 0);
+                // view.setInt8(3, 0);
+                // console.log(view.getInt32(0));
+                // const ts1 = view.getInt8(3);
+                // const ts2 = view.getInt8(0);
+                // const ts3 = view.getInt8(1);
+                // const ts4 = view.getInt8(2);
+                // console.log((ts1 << 24) | ts2 << 16 | ts3 << 8 | ts4)
+            },
+            methods: {
+                getFile() {
+                    const fileUrl = '/flv/game_GOK_high.flv';
+                    fetch(fileUrl)
+                        .then(res => res.arrayBuffer())
+                        .then(buf => this.parseFLV(buf));
+                },
+                parseFLV(buf) {
+                    console.log('raw data: ', buf);
+
+                    const flvParser = new FLVParser(buf);
+                    try {
+                        const { header } = flvParser.parse();
+                        this.header = header;
+                    } catch(e) {
+                        console.log(e);
+                    }
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
