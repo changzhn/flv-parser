@@ -73,6 +73,7 @@
                     const flvParser = new FLVParser(buf);
                     try {
                         const { header } = flvParser.parse();
+                        // console.table(header);
                         this.header = header;
                     } catch(e) {
                         console.log(e);

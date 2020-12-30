@@ -1,7 +1,9 @@
 (function() {
 
     DataView.prototype.getInt24 = function(offset) {
-        return (this.getInt32(offset) & 0xffffff00) >> 8;
+        return this.getUint8(offset) << 16
+            | this.getUint8(offset + 1) << 8
+            | this.getUint8(offset + 2);
     }
 
     class FLVParser {
@@ -14,7 +16,7 @@
     
         parse() {
             const header = this._parseHeader();
-
+            console.table(header);
             const body = this._parseBody();
 
             return {
@@ -29,9 +31,9 @@
                 throw new Error('非法文件');
             }
             
-            const sign1 = headerDataView.getInt8(0);
-            const sign2 = headerDataView.getInt8(1);
-            const sign3 = headerDataView.getInt8(2);
+            const sign1 = headerDataView.getUint8(0);
+            const sign2 = headerDataView.getUint8(1);
+            const sign3 = headerDataView.getUint8(2);
 
             if (sign1 !== 0x46 || sign2 !== 0x4c || sign3 !== 0x56) {
                 throw new Error('文件类型错误');
@@ -46,7 +48,7 @@
             };
 
             // version 1 字节
-            headerInfo.version = headerDataView.getInt8(3);
+            headerInfo.version = headerDataView.getUint8(3);
 
             /**
              * flags 1 字节 
@@ -55,7 +57,7 @@
              * 第7位保留 
              * 第8位表示是否有视频Tag
              */
-            const flags = headerDataView.getInt8(4);
+            const flags = headerDataView.getUint8(4);
             headerInfo.audio = (flags & 0b00000100) === 4;
             headerInfo.video = (flags & 0b00000001) === 1;
 
@@ -79,7 +81,7 @@
              * 0x09 视频Tag
              * 0x12 Script Tag
              */
-            const tagType = bodyDataView.getInt8(offset);
+            const tagType = bodyDataView.getUint8(offset);
             offset += 1;
 
             // data size 3 字节 表示该 Tag Data的大小
@@ -88,10 +90,10 @@
 
             // timestamp 3 字节 表示 Tag的时间戳
             // timestamp 的扩展 1 字节 表示 Tag的时间戳24位不够用的，扩展成32位
-            const ts1 = bodyDataView.getInt8(offset + 3);
-            const ts2 = bodyDataView.getInt8(offset);
-            const ts3 = bodyDataView.getInt8(offset + 1);
-            const ts4 = bodyDataView.getInt8(offset + 2);
+            const ts1 = bodyDataView.getUint8(offset + 3);
+            const ts2 = bodyDataView.getUint8(offset);
+            const ts3 = bodyDataView.getUint8(offset + 1);
+            const ts4 = bodyDataView.getUint8(offset + 2);
             const ts = ts1 << 24 | ts2 << 16 | ts3 << 8 | ts4;
             offset += 4;
 
@@ -99,6 +101,7 @@
             const streamID = bodyDataView.getInt24(offset);
             offset += 3;
 
+            console.log('script tag: ');
             console.table({
                 prevTagSize,
                 tagType,
@@ -133,7 +136,7 @@
             // 一般总为“onMetaData”（6F,6E,4D,65,74,61,44,61,74,61）。
             const amf1 = [0x02, 0x00, 0x0a, 0x6F, 0x6E, 0x4D, 0x65, 0x74, 0x61, 0x44, 0x61, 0x74, 0x61];
             for (let i = 0; i < amf1.length; i++) {
-                const d = metadataTagBodyView.getInt8(offset + i);
+                const d = metadataTagBodyView.getUint8(offset + i);
                 if (d !== amf1[i]) {
                     // AMF1 不为 "onMetaData"
                     console.warn('warn: Script Tag的AMF1内容不为 "onMetaData"');
@@ -144,7 +147,13 @@
             offset += amf1.length;
            
             // AMF2
+            // 一般为 0x08 为 ECMA array type
+            const amf2type = metadataTagBodyView.getUint8(offset);
+            offset += 1;
             
+            const arrayLength = metadataTagBodyView.getUint32(offset);
+            offset += 4;
+            console.log('arrayLength: ', arrayLength);
         }
 
         _parseAudioTag(offset) {}
